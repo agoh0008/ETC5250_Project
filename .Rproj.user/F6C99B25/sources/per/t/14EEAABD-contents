@@ -1,0 +1,260 @@
+---
+title: "Interesting_Findings"
+author: "Tashya Sathyajit"
+date: "2024-05-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(plotly)
+library(dplyr)
+library(tidyverse)
+water <- read_csv("water_train.csv")
+water_train <- read_csv("water_train.csv")
+water_test <- read_csv("water_test.csv")
+
+rf_pred <- read_csv("tash_final_prediction.csv")
+boost_pred <- read_csv("xgboost_predictions.csv")
+
+rf_merged_df <- merge(rf_pred, water_test, by = "ID", all.x = TRUE)
+merged_df_boost <- merge(boost_pred, water_test, by = "ID", all.x = TRUE)
+```
+
+# Distribution of Water Availability Predictions across Water Technology Categories
+
+
+```{r}
+
+rf_p <- ggplot(rf_merged_df, aes(fill=paste("Random Forest -", pstatus_id), x=water_tech_category)) + 
+    geom_bar(position="dodge") +
+    scale_fill_manual(values=c("Random Forest - y" = "seagreen3", "Random Forest - n" = "tomato")) +
+    theme_minimal() +
+    labs(x="Water Technology Categories", 
+         y="Count", 
+         fill="Water Availability Predictions") +
+    ggtitle("Distribution of Water Availability across Water Technology Categories in Central Africa") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Convert to plotly
+rf_plotly <- ggplotly(rf_p)
+
+# Print the plot
+rf_plotly
+
+```
+
+
+```{r}
+
+xgboost_p <- ggplot(merged_df_boost, aes(fill=paste("Boosted Tree -", pstatus_id), x=water_tech_category)) + 
+    geom_bar(position="dodge") +
+    scale_fill_manual(values=c("Boosted Tree - y" = "steelblue", "Boosted Tree - n" = "firebrick")) +
+    theme_minimal() +
+    labs(x="Water Technology Categories", 
+         y="Count", 
+         fill="Water Availability Predictions") +
+    ggtitle("Distribution of Water Availability across Water Technology Categories in Central Africa") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Convert to plotly
+xgboost_plotly <- ggplotly(xgboost_p)
+
+# Print the plot
+xgboost_plotly
+
+```
+
+
+```{r}
+
+subplot(rf_plotly, xgboost_plotly, nrows = 2)
+
+```
+
+# Trend of Water Availability across Installation Years for each Water Technology Category
+
+```{r}
+
+rf_filtered_df <- rf_merged_df %>% filter(install_year > 1980)
+
+rf_install_cat <- ggplot(rf_filtered_df, 
+                         aes(x=install_year, color=pstatus_id)) + 
+    geom_line(stat="count") +
+    facet_wrap(~water_tech_category, scales = "free_y") +
+    scale_color_manual(values=c("n" = "firebrick", "y" = "seagreen3")) +
+    theme_minimal() +
+    labs(x="Installation Year", 
+         y="Count", 
+         color="Water Availability Predictions") +
+    ggtitle("Trend of Water Availability across Installation Years for each Water Technology Category (Random Forest Model)")
+
+rf_install_cat_plotly <- ggplotly(rf_install_cat)
+
+rf_install_cat_plotly
+```
+
+
+```{r}
+
+xgboost_filtered_df <- merged_df_boost %>% filter(install_year > 1980)
+
+xgboost_install_cat <- ggplot(xgboost_filtered_df, 
+                         aes(x=install_year, color=pstatus_id)) + 
+    geom_line(stat="count") +
+    facet_wrap(~water_tech_category, scales = "free_y") +
+    scale_color_manual(values=c("n" = "orange", "y" = "darkblue")) +
+    theme_minimal() +
+    labs(x="Installation Year", 
+         y="Count", 
+         color="Water Availability Predictions") +
+    ggtitle("Trend of Water Availability across Installation Years for each Water Technology Category (Boosted Tree Model)")
+
+xgboost_install_cat_plotly <- ggplotly(xgboost_install_cat)
+xgboost_install_cat_plotly
+
+```
+
+
+
+
+```{r}
+install_year_distribution <- rf_merged_df |>
+  group_by(pstatus_id, install_year) |>
+  summarise(count = n()) |>
+  ungroup()
+
+library(plotly)
+install_plotly <- ggplot(install_year_distribution, aes(x = install_year, y = count, color = pstatus_id)) +
+  geom_line() +
+  labs(title = "RANDOMFOREST: Water Availability Predictions Across Installation Year",
+       x = "Installation Year",
+       y = "Count",
+       color = "Water Availability Prediction") +
+  theme_minimal()
+
+p_plotly <- ggplotly(install_plotly)
+p_plotly
+
+install_year_distribution_boost <- merged_df_boost |>
+  group_by(pstatus_id, install_year) |>
+  summarise(count = n()) |>
+  ungroup()
+
+install_plotly_boosted <- ggplot(install_year_distribution_boost, aes(x = install_year, y = count, color = pstatus_id)) +
+  geom_line() +
+  labs(title = "XGBOOSTED: Water Availability Predictions Across Installation Year",
+       x = "Installation Year",
+       y = "Count",
+       color = "Water Availability Prediction") +
+  theme_minimal()
+
+p_plotly_boost <- ggplotly(install_plotly_boosted)
+p_plotly_boost
+
+```
+
+
+```{r}
+# RANDOMFOREST plot
+install_plotly <- ggplot(install_year_distribution, aes(x = install_year, y = count, color = paste("Random Forest -", pstatus_id))) +
+  geom_line() +
+  scale_color_manual(values = c("Random Forest - y" = "seagreen3", "Random Forest - n" = "tomato")) +
+  labs(
+    title = "RANDOMFOREST: Water Availability Predictions Across Installation Year",
+    x = "Installation Year",
+    y = "Count",
+    color = "Water Availability Prediction"
+  ) +
+  theme_minimal()
+
+p_plotly <- ggplotly(install_plotly)
+
+# XGBOOSTED plot
+install_plotly_boosted <- ggplot(install_year_distribution_boost, aes(x = install_year, y = count, color = paste("XGBoosted -", pstatus_id))) +
+  geom_line() +
+  scale_color_manual(values = c("XGBoosted - y" = "lightblue", "XGBoosted - n" = "red")) +
+  labs(
+    title = "XGBOOSTED: Water Availability Predictions Across Installation Year",
+    x = "Installation Year",
+    y = "Count",
+    color = "Water Availability Prediction"
+  ) +
+  theme_minimal()
+
+p_plotly_boost <- ggplotly(install_plotly_boosted)
+
+# Combining the plots using subplot and adding a single title and unified legend
+combined_plot <- subplot(p_plotly, p_plotly_boost) %>%
+  layout(
+    title = "Distribution of Water Availability Across Installation Years",
+    legend = list(x = 0.5, y = -0.2, orientation = "h", xanchor = "center")  # Position and format the legend
+  )
+
+combined_plot
+```
+
+
+
+## BACK UP
+
+```{r}
+library(ggplot2)
+
+ggplot(merged_df, aes(x = water_tech_category, fill = as.factor(pstatus_id))) +
+  geom_bar(position = "dodge") +
+  facet_wrap(~ pay) +
+  labs(title = "Water Technology Categories by Prediction Status and Payment",
+       x = "Water Technology Category",
+       y = "Count",
+       fill = "Prediction Status") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+```{r}
+ggplot(merged_df_boost, aes(x = water_tech_category, fill = as.factor(pstatus_id))) +
+  geom_bar(position = "dodge") +
+  facet_wrap(~ pay) +
+  labs(title = "Water Technology Categories by Prediction Status and Payment",
+       x = "Water Technology Category",
+       y = "Count",
+       fill = "Prediction Status") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+# Backup Point: Proportion of Water Systems Requiring Payment for each Water Technology Category and Prediction
+
+```{r}
+
+ggplot(rf_merged_df, aes(x=water_tech_category, fill=pay)) + 
+    geom_bar(position="fill") +
+    facet_wrap(~pstatus_id) +
+    scale_fill_manual(values=c("no" = "firebrick", "yes" = "seagreen3")) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(x="Water Technology Category", 
+         y="Proportion", 
+         fill="Requires Payment") +
+    ggtitle("Proportion of Water Systems Requiring Payment for each Water Technology Category and Prediction \n(Random Forest Model)")
+
+
+```
+
+```{r}
+
+ggplot(merged_df_boost, aes(x=water_tech_category, fill=pay)) + 
+    geom_bar(position="fill") +
+    facet_wrap(~pstatus_id) +
+    scale_fill_manual(values=c("no" = "orange", "yes" = "darkblue")) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(x="Water Technology Category", 
+         y="Proportion", 
+         fill="Requires Payment") +
+    ggtitle("Proportion of Water Systems Requiring Payment for each Water Technology Category and Prediction \n(Boosted Tree Model)")
+
+```

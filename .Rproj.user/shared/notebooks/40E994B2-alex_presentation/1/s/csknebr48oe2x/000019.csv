@@ -1,0 +1,23 @@
+"0",""
+"0","rf_filtered_df <- rf_merged_df %>% filter(install_year > 1980)"
+"0",""
+"0","rf_install_cat <- ggplot(rf_filtered_df, "
+"0","                         aes(x=install_year, color=pstatus_id)) + "
+"0","    geom_line(stat=""count"") +"
+"0","    facet_wrap(~water_tech_category, scales = ""free_y"") +"
+"0","    scale_color_manual(values=c(""n"" = ""firebrick"", ""y"" = ""seagreen3"")) +"
+"0","    theme_minimal() +"
+"0","    labs(x=""Installation Year"", "
+"0","         y=""Count"", "
+"0","         color=""Water Availability Predictions"") +"
+"0","    ggtitle(""Trend of Water Availability across Installation Years for each Water Technology Category (Random Forest Model)"")"
+"0",""
+"0","ggplotly(rf_install_cat)"
+"2","Warning in dir.create(target_dir) :"
+"2","
+ "
+"2"," cannot create dir 'C:\Users\USER\Desktop\UNI\MASTERS OF BUSINESS ANALYTICS\SEM 1 2024\ETC5250 - Introduction to Machine Learning\ASSIGNMENTS\project\.Rproj.user\shared\notebooks\0C7A7332-presentation\1\F6C99B25b1bf2d38\csknebr48oe2x_t\lib\plotly-htmlwidgets-css-2.11.1', reason 'No such file or directory'
+"
+"2","Error in normalizePath(path.expand(path), winslash, mustWork) : 
+  path[1]=""C:/Users/USER/Desktop/UNI/MASTERS OF BUSINESS ANALYTICS/SEM 1 2024/ETC5250 - Introduction to Machine Learning/ASSIGNMENTS/project/.Rproj.user/shared/notebooks/0C7A7332-presentation/1/F6C99B25b1bf2d38/csknebr48oe2x_t/lib/plotly-htmlwidgets-css-2.11.1"": The system cannot find the file specified
+"

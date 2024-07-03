@@ -1,0 +1,70 @@
+---
+title: "rf_bt"
+output: html_document
+date: "2024-05-07"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+library(readr)
+library(tidyverse)
+library(dplyr)
+library(rsample)
+library(parsnip)
+library(discrim)
+library(kableExtra)
+library(yardstick)
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+water <- read_csv("data/water_train.csv") %>% 
+  mutate(status_id = factor(status_id))
+
+water_test <- read_csv("data/water_test.csv")
+
+```
+
+
+# Boosted Tree
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+set.seed(1148)
+
+bt_spec <- boost_tree() %>% 
+  set_mode("classification") %>% 
+  set_engine("xgboost")
+
+bt_fit <- bt_spec %>% 
+  fit(status_id~., data = water[,-1])
+
+```
+
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+water_ts_pred <- water_test |> 
+  bind_cols(predict(bt_fit, new_data=water_test, type="prob")) |> 
+  mutate(pstatus_id = predict(bt_fit, new_data=water_test, 
+                              type="class")) 
+
+water_ts_pred <- water_ts_pred[, c("ID", "pstatus_id")]
+
+water_ts_pred <- water_ts_pred %>%
+  mutate(pstatus_id = pull(pstatus_id, .pred_class))
+
+
+write_csv(water_ts_pred[,c("ID", "pstatus_id")], file="bt_predictions1.csv")
+
+```
+
+
+
+
+

@@ -1,0 +1,18 @@
+"0",""
+"0","install_year_distribution_boost <- merged_df_boost |>"
+"0","  group_by(pstatus_id, install_year) |>"
+"0","  summarise(count = n()) |>"
+"0","  ungroup()"
+"1","[38;5;232m`summarise()` has grouped output by 'pstatus_id'. You can override
+using the `.groups` argument.[39m
+"
+"0","install_plotly_boosted <- ggplot(install_year_distribution_boost, aes(x = install_year, y = count, color = pstatus_id)) +"
+"0","  geom_line() +"
+"0","  labs(title = ""XGBOOSTED: Water Availability Predictions Across Installation Year"","
+"0","       x = ""Installation Year"","
+"0","       y = ""Count"","
+"0","       color = ""Water Availability Prediction"") +"
+"0","  theme_minimal()"
+"0",""
+"0","p_plotly_boost <- ggplotly(install_plotly_boosted)"
+"0","p_plotly_boost"

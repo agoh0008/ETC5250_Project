@@ -1,0 +1,13 @@
+"0","library(ggplot2)"
+"0",""
+"0","ggplot(merged_df, aes(x = water_tech_category, fill = as.factor(pstatus_id))) +"
+"0","  geom_bar(position = ""dodge"") +"
+"0","  facet_wrap(~ pay) +"
+"0","  labs(title = ""Water Technology Categories by Prediction Status and Payment"","
+"0","       x = ""Water Technology Category"","
+"0","       y = ""Count"","
+"0","       fill = ""Prediction Status"") +"
+"0","  theme_minimal() +"
+"0","  theme(axis.text.x = element_text(angle = 45, hjust = 1))"
+"2","Error: object 'merged_df' not found
+"

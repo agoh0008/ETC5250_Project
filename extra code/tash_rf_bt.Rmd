@@ -1,0 +1,134 @@
+---
+title: "rf_bt"
+output: html_document
+date: "2024-05-07"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+library(readr)
+library(tidyverse)
+library(dplyr)
+library(rsample)
+library(parsnip)
+library(discrim)
+library(kableExtra)
+library(yardstick)
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+water <- read_csv("water_train.csv") %>% 
+  mutate(status_id = factor(status_id))
+
+water_test <- read_csv("water_test.csv")
+
+
+
+
+```
+
+
+# Boosted Tree
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+set.seed(1148)
+
+bt_spec <- boost_tree() %>% 
+  set_mode("classification") %>% 
+  set_engine("xgboost")
+
+bt_fit <- bt_spec %>% 
+  fit(status_id~., data = water[,-1])
+
+```
+
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+water_ts_pred <- water_test |> 
+  bind_cols(predict(bt_fit, new_data=water_test, type="prob")) |> 
+  mutate(pstatus_id = predict(bt_fit, new_data=water_test, 
+                              type="class")) 
+
+water_ts_pred <- water_ts_pred[, c("ID", "pstatus_id")]
+
+water_ts_pred <- water_ts_pred %>%
+  mutate(pstatus_id = pull(pstatus_id, .pred_class))
+
+
+write_csv(water_ts_pred[,c("ID", "pstatus_id")], file="bt_predictions1.csv")
+
+```
+
+
+
+# Random Forest
+
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+water_train <- read_csv("water_train.csv")
+
+water_test <- read_csv("water_test.csv")
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+# Do standardisation on everything except ID 
+
+set.seed(1148)
+
+water_std <- water_train %>%
+  mutate_at(vars(-1), ~ if(is.numeric(.)) (.-mean(.))/sd(.) else .) 
+
+water_split <- initial_split(water_std, 2/3, 
+                             strata = status_id)
+
+w_train <- training(water_split)
+
+w_test <- testing(water_split)
+
+w_train <- w_train %>%
+  mutate(status_id = factor(status_id)) %>%
+  select(-ID, -report_date) 
+
+
+```
+
+
+```{r}
+set.seed(1148)
+# applying the model
+rf_spec <- rand_forest(mtry=2, trees=1000) |>
+  set_mode("classification") |>
+  set_engine("randomForest")
+
+# fitting the model w/ training that doesnt have id and report_date
+water_fit_rf <- rf_spec |> 
+  fit(status_id ~ ., data = w_train)
+
+water_fit_rf
+
+# geting predicted values
+w_ts_pred <- w_test |>
+  mutate(pstatus_id = predict(water_fit_rf$fit,
+                              w_test[, -c(1,5)],
+                              type = "response"))
+w_ts_pred$status_id <- factor(w_ts_pred$status_id)
+bal_accuracy(w_ts_pred, status_id, pstatus_id)
+
+```
+
+
+
+
+
+

@@ -1,0 +1,61 @@
+---
+title: "PCA"
+author: "Tashya Sathyajit"
+date: "2024-05-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggcorrplot)
+library('corrr')
+library("FactoMineR")
+library(factoextra)
+set.seed(1148)
+water <- read_csv("water_train.csv")
+```
+
+
+```{r}
+# Transforming Variables to be Numerical
+set.seed(1148)
+# Drop the original report_date variable
+water_PCA <- water[, !names(water) %in% "report_date"]
+
+# Water Tech Category
+
+# Perform one-hot encoding
+water_tech_dummies <- model.matrix(~ water_tech_category - 1, data = water)
+
+# Combine dummy variables with the original dataset
+water_PCA <- cbind(water_PCA, water_tech_dummies)
+
+# Drop the original water_tech_category variable
+water_PCA <- water_PCA[, !names(water_PCA) %in% "water_tech_category"]
+
+# Is Urban
+# Convert is_urban to numerical (0 or 1)
+water_PCA$is_urban <- as.numeric(water_PCA$is_urban)
+
+# Pay
+# Convert pay to numerical (0 or 1)
+water_PCA$pay <- ifelse(water_PCA$pay == "yes", 1, 0)
+
+water_std <- water_PCA %>%
+  mutate_at(vars(-1), ~ if(is.numeric(.)) (.-mean(.))/sd(.) else .) 
+
+# removing status_id 
+water_data <- water_std[, -2]
+water_data <- water_data |> select(-ID)
+corr_matrix <- cor(water_data)
+ggcorrplot(corr_matrix)
+water.pca <- princomp(corr_matrix)
+summary(water.pca)
+
+
+fviz_eig(water.pca, addlabels = TRUE)
+
+fviz_cos2(water.pca, choice = "var", axes = 1:2)
+
+```
+

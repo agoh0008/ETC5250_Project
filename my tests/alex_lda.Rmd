@@ -1,0 +1,247 @@
+---
+title: "project"
+output: html_document
+date: "2024-05-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+library(readr)
+library(tidyverse)
+library(dplyr)
+library(rsample)
+library(parsnip)
+library(discrim)
+library(kableExtra)
+library(yardstick)
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+sample <- read_csv("data/sample_submission.csv")
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+water_train <- read_csv("data/water_train.csv")
+
+water_test <- read_csv("data/water_test.csv")
+
+```
+
+
+
+# LDA Model
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+set.seed(1148)
+
+# water_std <- water_train %>% 
+#    mutate_if(is.numeric, function(x) (x-mean(x))/sd(x))
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+water_train <- read_csv("data/water_train.csv")
+
+```
+
+
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+# Transforming Variables to be Numerical
+
+# Drop the report_date variable
+water_train <- water_train[, !names(water_train) %in% "report_date"]
+
+# Water Tech Category
+
+# Perform one-hot encoding
+water_tech_dummies <- model.matrix(~ water_tech_category - 1, data = water_train)
+
+# Combine dummy variables with the original dataset
+water_train <- cbind(water_train, water_tech_dummies)
+
+# Drop the original water_tech_category variable
+water_train <- water_train[, !names(water_train) %in% "water_tech_category"]
+
+# Is Urban
+# Convert is_urban to numerical (0 or 1)
+water_train$is_urban <- as.numeric(water_train$is_urban)
+
+# Pay
+# Convert pay to numerical (0 or 1)
+water_train$pay <- ifelse(water_train$pay == "yes", 1, 0)
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+# Do standardisation on everything except ID 
+
+water_std <- water_train %>%
+  mutate_at(vars(-1), ~ if(is.numeric(.)) (.-mean(.))/sd(.) else .) 
+
+water_split <- initial_split(water_std, 2/3, 
+                             strata = status_id)
+
+w_train <- training(water_split)
+
+w_test <- testing(water_split)
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+w_train$status_id <- factor(w_train$status_id)
+
+lda_spec <- discrim_linear() %>% 
+  set_mode("classification") %>% 
+  set_engine("MASS", prior = c(0.5, 0.5))
+
+lda_fit <- lda_spec %>%  
+  fit(status_id ~ ., data = w_train[,-1]) # remove column 1 (ID)
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+lda_fit
+
+```
+
+```{r}
+
+set.seed(1148)
+
+w_train_pred <- w_train %>% 
+  mutate(pstatus_id = factor(predict(lda_fit$fit, w_train)$class),
+         status_id = factor(status_id))
+
+w_test_pred <- w_test %>% 
+  mutate(pstatus_id = factor(predict(lda_fit$fit, w_test)$class),
+         status_id = factor(status_id))
+
+train_table <- w_train_pred %>%
+  count(status_id, pstatus_id) %>%
+  group_by(status_id) %>%
+  mutate(cl_acc = n[pstatus_id == status_id] / sum(n)) %>%
+  pivot_wider(names_from = pstatus_id, values_from = n, values_fill = 0) %>%
+  dplyr::select(status_id, y, n, cl_acc) %>%
+  kable(format = "html", caption = "Table 1: Training Set Prediction Results") %>%
+  kable_styling()
+
+
+test_table <- w_test_pred %>%
+  count(status_id, pstatus_id) %>%
+  group_by(status_id) %>%
+  mutate(cl_acc = n[pstatus_id == status_id] / sum(n)) %>%
+  pivot_wider(names_from = pstatus_id, values_from = n, values_fill = 0) %>%
+  dplyr::select(status_id, y, n, cl_acc) %>%
+  kable(format = "html", caption = "Table 2: Testing Set Prediction Results") %>%
+  kable_styling()
+
+acc_tr <- bal_accuracy(w_train_pred, status_id, pstatus_id)
+
+acc_test <- bal_accuracy(w_test_pred, status_id, pstatus_id)
+
+train_table
+test_table
+
+acc_tr
+acc_test
+
+```
+
+# LDA on Entire Water Dataset (for submitting to Kaggle)
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+set.seed(1148)
+
+# Do standardisation on everything except ID 
+
+water_std <- water_train %>%
+  mutate_at(vars(-1), ~ if(is.numeric(.)) (.-mean(.))/sd(.) else .) 
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+# Transforming Variables to be Numerical
+
+# Drop the report_date variable
+water_test <- water_test[, !names(water_test) %in% "report_date"]
+
+# Water Tech Category
+
+# Perform one-hot encoding
+water_tech_dummies <- model.matrix(~ water_tech_category - 1, data = water_test)
+
+# Combine dummy variables with the original dataset
+water_test <- cbind(water_test, water_tech_dummies)
+
+# Drop the original water_tech_category variable
+water_test <- water_test[, !names(water_test) %in% "water_tech_category"]
+
+# Is Urban
+# Convert is_urban to numerical (0 or 1)
+water_test$is_urban <- as.numeric(water_test$is_urban)
+
+# Pay
+# Convert pay to numerical (0 or 1)
+water_test$pay <- ifelse(water_test$pay == "yes", 1, 0)
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+water_std$status_id <- factor(water_std$status_id)
+
+lda_spec <- discrim_linear() %>% 
+  set_mode("classification") %>% 
+  set_engine("MASS", prior = c(0.5, 0.5))
+
+lda_fit <- lda_spec %>%  
+  fit(status_id ~ ., data = water_std[,-1]) # remove column 1 (ID)
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+lda_fit
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+water_ts_pred <- water_test |> 
+  bind_cols(predict(lda_fit, new_data = water_test, type = "prob")) |> 
+  mutate(pstatus_id = predict(lda_fit, new_data = water_test, type = "class"))
+
+
+# write_csv(water_ts_pred[,c("ID", "pstatus_id")], file="lda_predictions1.csv")
+
+```
+
+```{r}
+
+# Extract the .pred_class column from the tibble
+water_ts_pred$pstatus_id <- water_ts_pred$pstatus_id$.pred_class
+
+# Write the data frame to a CSV file
+write_csv(water_ts_pred[, c("ID", "pstatus_id")], file = "lda_predictions1.csv")
+
+
+```
+
+

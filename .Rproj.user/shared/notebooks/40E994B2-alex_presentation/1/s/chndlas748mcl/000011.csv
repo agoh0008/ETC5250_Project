@@ -1,0 +1,4 @@
+"0",""
+"0","# Assuming rf_pred and water are your data frames"
+"0","rf_merged_df <- merge(rf_pred, water_test, by = ""ID"", all.x = TRUE)"
+"0",""

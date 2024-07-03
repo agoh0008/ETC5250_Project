@@ -1,0 +1,176 @@
+---
+title: "presentation"
+output: html_document
+date: "2024-05-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+library(readr)
+library(ggplot2)
+library(plotly)
+library(dplyr)
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+water <- read_csv("water_train.csv") %>% 
+  mutate(status_id = factor(status_id))
+
+water_test <- read_csv("water_test.csv")
+
+```
+
+```{r}
+
+rf_pred <-  read_csv("tash_final_prediction.csv")
+xgboost_pred <- read_csv("xgboost_predictions.csv")
+
+```
+```{r}
+
+# Assuming rf_pred and water are your data frames
+rf_merged_df <- merge(rf_pred, water_test, by = "ID", all.x = TRUE)
+
+xgboost_merged_df <- merge(xgboost_pred, water_test, by = "ID",
+                           all.x = TRUE)
+
+```
+
+# Distribution of Water Availability Predictions across Water Technology Categories
+
+Observations:
+
+- 
+
+```{r}
+
+
+rf_p <- ggplot(rf_merged_df, aes(fill=paste("Random Forest -", pstatus_id), x=water_tech_category)) + 
+    geom_bar(position="dodge") +
+    scale_fill_manual(values=c("Random Forest - y" = "seagreen3", "Random Forest - n" = "tomato")) +
+    theme_minimal() +
+    labs(x="Water Technology Categories", 
+         y="Count", 
+         fill="Water Availability Predictions") +
+    ggtitle("Distribution of Water Availability across Water Technology Categories in Central Africa") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Convert to plotly
+rf_plotly <- ggplotly(rf_p)
+
+# Print the plot
+rf_plotly
+
+```
+
+```{r}
+
+xgboost_p <- ggplot(xgboost_merged_df, aes(fill=paste("Boosted Tree -", pstatus_id), x=water_tech_category)) + 
+    geom_bar(position="dodge") +
+    scale_fill_manual(values=c("Boosted Tree - y" = "steelblue", "Boosted Tree - n" = "firebrick")) +
+    theme_minimal() +
+    labs(x="Water Technology Categories", 
+         y="Count", 
+         fill="Water Availability Predictions") +
+    ggtitle("Distribution of Water Availability across Water Technology Categories in Central Africa") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Convert to plotly
+xgboost_plotly <- ggplotly(xgboost_p)
+
+# Print the plot
+xgboost_plotly
+
+```
+
+
+```{r}
+
+subplot(rf_plotly, xgboost_plotly, nrows = 2)
+
+```
+
+# Trend of Water Availability across Installation Years for each Water Technology Category
+
+```{r}
+
+rf_filtered_df <- rf_merged_df %>% filter(install_year > 1980)
+
+rf_install_cat <- ggplot(rf_filtered_df, 
+                         aes(x=install_year, color=pstatus_id)) + 
+    geom_line(stat="count") +
+    facet_wrap(~water_tech_category, scales = "free_y") +
+    scale_color_manual(values=c("n" = "firebrick", "y" = "seagreen3")) +
+    theme_minimal() +
+    labs(x="Installation Year", 
+         y="Count", 
+         color="Water Availability Predictions") +
+    ggtitle("Trend of Water Availability across Installation Years for each Water Technology Category (Random Forest Model)")
+
+rf_install_cat_plotly <- ggplotly(rf_install_cat)
+
+
+```
+
+
+```{r}
+
+xgboost_filtered_df <- xgboost_merged_df %>% filter(install_year > 1980)
+
+xgboost_install_cat <- ggplot(xgboost_filtered_df, 
+                         aes(x=install_year, color=pstatus_id)) + 
+    geom_line(stat="count") +
+    facet_wrap(~water_tech_category, scales = "free_y") +
+    scale_color_manual(values=c("n" = "orange", "y" = "darkblue")) +
+    theme_minimal() +
+    labs(x="Installation Year", 
+         y="Count", 
+         color="Water Availability Predictions") +
+    ggtitle("Trend of Water Availability across Installation Years for each Water Technology Category (Boosted Tree Model)")
+
+xgboost_install_cat_plotly <- ggplotly(xgboost_install_cat)
+
+```
+
+
+# Backup Point: Proportion of Water Systems Requiring Payment for each Water Technology Category and Prediction
+
+```{r}
+
+ggplot(rf_merged_df, aes(x=water_tech_category, fill=pay)) + 
+    geom_bar(position="fill") +
+    facet_wrap(~pstatus_id) +
+    scale_fill_manual(values=c("no" = "firebrick", "yes" = "seagreen3")) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(x="Water Technology Category", 
+         y="Proportion", 
+         fill="Requires Payment") +
+    ggtitle("Proportion of Water Systems Requiring Payment for each Water Technology Category and Prediction \n(Random Forest Model)")
+
+
+```
+
+```{r}
+
+ggplot(xgboost_merged_df, aes(x=water_tech_category, fill=pay)) + 
+    geom_bar(position="fill") +
+    facet_wrap(~pstatus_id) +
+    scale_fill_manual(values=c("no" = "orange", "yes" = "darkblue")) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(x="Water Technology Category", 
+         y="Proportion", 
+         fill="Requires Payment") +
+    ggtitle("Proportion of Water Systems Requiring Payment for each Water Technology Category and Prediction \n(Boosted Tree Model)")
+
+```
+
+
+
